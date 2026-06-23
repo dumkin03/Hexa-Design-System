@@ -1,13 +1,14 @@
-# Color Foundation Skill
+# Hexa Design System
 
-A Claude skill that restructures a Figma file's color variables into a 3-tier
-**Primitives → Tokens → Semantic** architecture, with a human review gate after every tier.
+Design system resources and Claude skills.
 
-## Skill
+## Skills
 
-- [`build-tiered-color-architecture/SKILL.md`](build-tiered-color-architecture/SKILL.md)
+- [`build-tiered-color-architecture/SKILL.md`](build-tiered-color-architecture/SKILL.md) —
+  restructures a Figma file's color variables into a 3-tier
+  **Primitives → Tokens → Semantic** architecture, with a human review gate after every tier.
 
-## What it does
+## What the color skill does
 
 Takes a file's existing color variables — however they're currently organized — and
 restructures them into three explicit tiers:
