@@ -14,9 +14,12 @@ description: >
   gate after every tier.
 compatibility:
   tools:
-    - figma-console:figma_get_variables   # collection inspection, alias resolution
-    - figma-console:figma_execute         # variable/collection creation, binding (Phase 5 only)
-  figma_plugin: figma-console-mcp (must be open and connected to the target file)
+    - figma:get_variable_defs   # quick read of a selected node's bound variables (optional)
+    - figma:use_figma           # all inspection + writes via the Plugin API (read collections, create, rename, bind)
+  figma_setup: >
+    Official Figma MCP server connected to the target file open in Figma Desktop.
+    No Desktop Bridge dev-plugin required — use_figma runs Plugin API code directly.
+    MANDATORY: load the figma-use skill before every use_figma call.
 ---
 
 # build-tiered-color-architecture
@@ -43,7 +46,7 @@ Real prompts this skill handles:
 
 | Input | How to get it |
 |---|---|
-| Target Figma file URL | From the user — confirm the Desktop Bridge is connected to this file |
+| Target Figma file URL | From the user — extract the `fileKey` from the URL and pass it to every `use_figma`/`get_variable_defs` call. Confirm the file is open in Figma Desktop with the Figma MCP server connected (no Desktop Bridge plugin needed). |
 | Reference file URL (optional) | If the user wants to match an existing file's convention — read its structure in Phase 0 too |
 | Numbering convention | Default to Tailwind `50–950`. Confirm if the user specifies otherwise. |
 
@@ -92,15 +95,17 @@ Phase 5 — Execute & Verify         (writes)
 
 ## Phase 0 — Discovery
 
-Read every COLOR variable across all collections in the target file:
+Read every COLOR variable across all collections in the target file. Use a read-only `use_figma`
+script (`figma.variables.getLocalVariableCollectionsAsync()`, then `getVariableByIdAsync` per id,
+resolving aliases per mode) and `return` the inventory — collect:
 - Collection names, modes (names + IDs), variable names, step counts per group, hardcoded vs.
   aliased, resolved hex per mode.
 - Note any non-color variables that share a name pattern with color groups (e.g. a "Scale"
   primitive for spacing) — don't conflate them with color ramps.
 
 **If the user references a reference/style-model file:**
-Connect to it (`figma_list_open_files` / `figma_navigate` if Desktop Bridge needs switching) and
-inventory the same things:
+Inventory it the same way — pass that file's `fileKey` to a `use_figma` read call (each call
+targets a file by key, so there's no plugin/file switching to manage) and capture the same things:
 - Naming pattern, e.g. `Color/[Group]/[Step]`
 - Step range and increment style (e.g. Tailwind `50,100,200,300,...,950` vs. Material
   `0,5,10,...,100`)
