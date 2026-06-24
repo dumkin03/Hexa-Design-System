@@ -30,6 +30,15 @@ color values.
 
 ---
 
+## Example prompts
+
+Real prompts this skill handles:
+
+- **Full restructure:** "Organize my color variables into Primitives/Tokens/Semantic" / "restructure my Figma colors into a 3-tier system" / "make my colors match [reference file]'s architecture." → Run all five phases.
+- **Naming-only pass:** "The new groups Color Primitives, Color Semantic, and Color Tokens are respectively 1. Primitives, 2. Tokens, and 3. Semantic — rename these collections accordingly. And for scalability, in the future we'll also add Typography, spacing, and other design-system variables." → The tiers already exist and are correctly bound; the user only wants the **Tier collection naming** convention applied (see Standing rules). This is a rename-only operation — no Primitives/Tokens/Semantic restructuring, no rebinding. Map by concept, not list position (`Color Primitives → 1. Primitives`, `Color Tokens → 2. Tokens`, `Color Semantic → 3. Semantic`), confirm the mapping, then rename. Collection renames don't touch bindings (those are by ID), so this is safe and reversible.
+
+---
+
 ## Inputs
 
 | Input | How to get it |
@@ -245,6 +254,17 @@ the user for a decision.
 ## Standing rules (apply throughout all phases)
 
 - Primitives are hardcoded; Tokens alias only Primitives; Semantics alias only Tokens.
+- **Tier collection naming.** Name the three tier collections with an ordering prefix and no
+  type-specific prefix: `1. Primitives`, `2. Tokens`, `3. Semantic`. Drop prefixes like `Color `
+  (e.g. `Color Primitives` → `1. Primitives`) so the same numbered tiers can later also host
+  Typography, spacing, radius, and other design-system variables — the numbers convey the
+  primitives → tokens → semantic order in the variables panel, independent of value type. Renaming
+  a collection never breaks existing bindings (variables are referenced by ID, not name), so it's
+  safe and reversible. If the target name already exists as an empty stray collection, delete the
+  stray first to avoid a duplicate name. Map old → new **by concept, not list position** — a
+  reordered "respectively" list (e.g. Semantic listed before Tokens) still maps Semantic→Semantic,
+  Tokens→Tokens. Note: this collection-level numbering is distinct from the Tailwind `50–950`
+  numbering used for *steps within* a ramp.
 - Never invent a new hex value without flagging it as an explicit, scoped exception with
   sign-off — granularity shortfalls are a conversation, not a silent workaround.
 - Always check before editing — every phase ends in a proposal, not an action. Phase 5 is the
