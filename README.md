@@ -7,6 +7,10 @@ Design system resources and Claude skills.
 - [`build-tiered-color-architecture/SKILL.md`](build-tiered-color-architecture/SKILL.md) —
   restructures a Figma file's color variables into a 3-tier
   **Primitives → Tokens → Semantic** architecture, with a human review gate after every tier.
+- [`build-spacing-scale/SKILL.md`](build-spacing-scale/SKILL.md) —
+  builds, merges, renames, reorders, and prunes a numeric **scale** of FLOAT variables
+  (spacing/sizing/any ramp): merge-by-value (ignore names), step-name conventions, placement
+  under Primitives, and value ordering — confirming before any binding-breaking write.
 
 ## What the color skill does
 
