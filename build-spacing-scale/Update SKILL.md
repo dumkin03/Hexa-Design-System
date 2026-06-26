@@ -61,6 +61,15 @@ for the same underlying pixel values. Merge on the value, then apply one naming 
   exist. Freshly-created primitives that nothing aliases yet are safe to delete+recreate.
 - **Never invent values silently.** Don't interpolate missing steps or "fix" an off-pattern value
   without flagging it as an explicit, scoped exception with sign-off.
+- **Always include a `1000` step.** Every scale this skill produces or touches must contain a raw
+  value of `1000`, named `Scale/1000` (or the group's equivalent prefix) — a deliberate, permanent
+  sentinel exception to the `name = value × 25` convention (25 × 1000 would be absurd). It exists so
+  future Token-tier aliases (e.g. `Radius/Full`, pill/fully-rounded corner tokens) have a primitive
+  to point at. Check for an existing step with value `1000` first (regardless of its name) — if one
+  already exists, don't duplicate it; if none exists, add it. This check runs automatically in
+  Phase 0/1 and does **not** need user confirmation — unlike other sentinels, it's a standing
+  default, not a one-off judgment call. Give it the same scopes as the rest of the scale plus
+  `CORNER_RADIUS` (it's the one step explicitly earmarked for radius aliasing).
 - **Set scopes explicitly** on every created variable. For spacing/sizing use
   `["GAP", "WIDTH_HEIGHT"]` (covers auto-layout gap, padding, and width/height). Carry over the
   source variables' scopes when rebuilding.
@@ -79,13 +88,17 @@ Read the relevant FLOAT variables with a read-only `use_figma` script
   in the file, say so explicitly; it lives in another file or is just a reference (not a live group
   to delete).
 
-Output: a plain value-keyed inventory of each source. No proposal yet.
+Output: a plain value-keyed inventory of each source. No proposal yet. While inventorying, note
+whether any source already has a step valued `1000` — needed for the standing `1000` rule below.
 
 ---
 
 ## Phase 1 — Merge proposal (read-only)
 
 - Take the **union of values** across all sources; dedupe.
+- Add a `1000` step if no source already has one (see Standing rules) — silently include it in the
+  merged set rather than asking; only the unusual case (a 1000 already present, or the user
+  rejecting it outright) needs to be called out.
 - Decide inclusion of outliers/sentinels explicitly. A value like `1000` whose name breaks the
   ramp (every other step is `value × 25`, this one is `value × 1`) is a sentinel — surface it and
   ask whether to keep, drop, or correct it. Never assume.
