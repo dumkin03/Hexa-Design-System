@@ -61,6 +61,18 @@ for the same underlying pixel values. Merge on the value, then apply one naming 
   exist. Freshly-created primitives that nothing aliases yet are safe to delete+recreate.
 - **Never invent values silently.** Don't interpolate missing steps or "fix" an off-pattern value
   without flagging it as an explicit, scoped exception with sign-off.
+- **Always include `1` and `1000` steps.** Every scale this skill produces or touches must contain
+  two permanent sentinel steps, named after their raw value (not `value × 25`):
+  - `Scale/1000` (value `1000`) — reserved for future Token-tier aliases like `Radius/Full` /
+    pill-shaped corners. Scopes: the rest of the scale's scopes plus `CORNER_RADIUS`.
+  - `Scale/1` (value `1`) — reserved for future Token-tier aliases like hairline borders / 1px
+    strokes. Scopes: the rest of the scale's scopes plus `STROKE_FLOAT`.
+
+  Both exist so the Token tier has a primitive to alias even though neither fits the
+  `value × 25` ramp (25 × 1 and 25 × 1000 are both absurd). Check for an existing step with each
+  raw value first (regardless of its name) — if one already exists, don't duplicate it; if none
+  exists, add it. This check runs automatically in Phase 0/1 and does **not** need user
+  confirmation — unlike other sentinels, these are standing defaults, not one-off judgment calls.
 - **Set scopes explicitly** on every created variable. For spacing/sizing use
   `["GAP", "WIDTH_HEIGHT"]` (covers auto-layout gap, padding, and width/height). Carry over the
   source variables' scopes when rebuilding.
@@ -79,16 +91,21 @@ Read the relevant FLOAT variables with a read-only `use_figma` script
   in the file, say so explicitly; it lives in another file or is just a reference (not a live group
   to delete).
 
-Output: a plain value-keyed inventory of each source. No proposal yet.
+Output: a plain value-keyed inventory of each source. No proposal yet. While inventorying, note
+whether any source already has a step valued `1` and/or `1000` — needed for the standing
+sentinel rule below.
 
 ---
 
 ## Phase 1 — Merge proposal (read-only)
 
 - Take the **union of values** across all sources; dedupe.
-- Decide inclusion of outliers/sentinels explicitly. A value like `1000` whose name breaks the
-  ramp (every other step is `value × 25`, this one is `value × 1`) is a sentinel — surface it and
-  ask whether to keep, drop, or correct it. Never assume.
+- Add `1` and `1000` steps if no source already has them (see Standing rules) — silently include
+  them in the merged set rather than asking; only the unusual case (one already present, or the
+  user rejecting them outright) needs to be called out.
+- Decide inclusion of other outliers/sentinels explicitly. A value like `1000` whose name breaks
+  the ramp (every other step is `value × 25`, this one is `value × 1`) is a sentinel — surface it
+  and ask whether to keep, drop, or correct it. Never assume.
 - Drop steps the user says aren't used in the design system (e.g. "there's no value 1, remove it").
 - Sort the merged values ascending.
 
