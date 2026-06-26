@@ -1,0 +1,271 @@
+---
+name: build-typography-architecture
+description: >
+  Restructures typography variables in the Hexa Design System Figma file
+  (xVyGzJn1YYJbDoQwVOfFho) into Hexa's 3-tier Primitives → Tokens → Semantic architecture, with
+  font sizes converted to true numeric variables from Hexa's Scale ramp. Use any time typography
+  work touches Hexa's variable architecture — adding new type styles, fixing or auditing
+  Typography variables, bringing a stray/legacy typography collection into the tiered system, or
+  extending Font-Family/Font-Weight primitives. Trigger on phrases like "fix Hexa's typography
+  variables", "add a new type style to Hexa", "this typography collection is outside our 3-tier
+  setup", or "make font sizes real numbers instead of strings" in the Hexa file. Hexa-specific:
+  assumes Hexa's exact collection names, Scale formula, and brand modes rather than re-deriving
+  them each run.
+compatibility:
+  tools:
+    - figma-console:figma_get_variables          # collection inspection, alias resolution (Phases 0, 1, 5)
+    - figma-console:figma_batch_create_variables # literal-value variable creation (Phase 2)
+    - figma-console:figma_rename_variable        # label fixes without breaking aliases
+    - figma-console:figma_execute                # alias binding via setValueForMode (Phases 3, 4 — VARIABLE_ALIAS isn't a literal value, so batch/update tools can't set it; only figma_execute can)
+    - figma-console:figma_delete_variable_collection # legacy collection cleanup (Phase 6)
+  figma_plugin: figma-console-mcp (must be open and connected to the Hexa file)
+  figma_file: Hexa Design System — xVyGzJn1YYJbDoQwVOfFho
+---
+
+# build-typography-architecture (Hexa Design System)
+
+Takes typography variables in the **Hexa Design System** file — wherever they currently live,
+however they're typed — and folds them into Hexa's established 3-tier architecture:
+**Font-Family** and **Font-Weight** primitives live under `1. Primitives`, font **sizes** resolve
+through Hexa's existing `Scale` ramp (also under `1. Primitives`, never duplicated), and the full
+typography token set (Title/Screen, Title/Section, Title/Subsection, Title/Body, Body, Caption,
+Display) lives under `2. Tokens > Typography`, aliasing Tier 1 only, with identical values across
+Hexa's 5 brand modes unless explicitly told otherwise. Any legacy ad-hoc collection (e.g. a
+standalone `Typography` / `Typography Primitives` pair) is deleted once migration is verified.
+
+This is the Hexa-specific version of this workflow — it hardcodes Hexa's known structure rather
+than rediscovering it each run. When this gets generalized into a reusable template under
+`ds-claude-context`, the hardcoded facts below (collection names, Scale formula, mode list)
+become the parts that get re-derived per project.
+
+---
+
+## Hexa's known architecture (treat as ground truth, not something to re-derive)
+
+| Fact | Value |
+|---|---|
+| File | Hexa Design System (`xVyGzJn1YYJbDoQwVOfFho`) |
+| Tier 1 collection | `1. Primitives` — single mode (`Default`) |
+| Tier 2 collection | `2. Tokens` — 5 modes: `Default`, `Lite`, `Priority`, `Privilege`, `Wealth` |
+| Tier 3 collection | `3. Semantics` — same 5 modes as Tier 2 |
+| Scale naming formula | `name = value × 25` (e.g. `Scale/600` = `24`) — two fixed exceptions: `Scale/1000` = `1000`, `Scale/1` = `1` |
+| Typography Tier 1 groups | `Typography/Font-Family/[Step]`, `Typography/Font-Weight/[Step]` — both `STRING` |
+| Typography Tier 2 location | `2. Tokens > Typography/...` — never a standalone collection |
+| Font Family value | `Poppins`, primitive name `Typography/Font-Family/Sans-Serif` |
+| Font Weight values | `Typography/Font-Weight/Regular` = `"400"`, `Typography/Font-Weight/Medium` = `"500"`, `Typography/Font-Weight/Medium Underline` = `"Medium Underline"` (decoration value, not a true weight — kept here as an explicit placeholder pending a future Text-Decoration tier) |
+
+If a future session finds any of these facts have changed (e.g. a 6th brand mode added, or the
+Scale formula no longer holds for new steps), stop and surface the discrepancy before proceeding —
+don't silently follow this table over live file state.
+
+---
+
+## Inputs
+
+| Input | How to get it |
+|---|---|
+| What triggered this run | New type style? Fixing a stray collection? Auditing existing Typography tokens? — changes which phases apply |
+| Whether the file currently has live nodes/components bound to the typography variables being touched | Ask explicitly before any delete (Phase 6) — deletion severs bindings permanently with no migration path |
+
+---
+
+## Standing naming & structure conventions
+
+- **Tier 1 location**: `1. Primitives > Typography/Font-Family/[Step]` and
+  `1. Primitives > Typography/Font-Weight/[Step]` — sibling groups to `Color/` and `Scale/` in the
+  same collection, never a separate collection.
+- **Sizes are not a Typography primitive.** Font sizes resolve through `1. Primitives > Scale`,
+  not a `Typography/Font-Size/` group. Add missing `Scale` steps first (Phase 2a) using
+  `name = value × 25` if a new type style needs a size that doesn't exist yet.
+- **Tier 2 location**: `2. Tokens > Typography/...`, aliasing Tier 1 only — never its own
+  collection, since it must ride Hexa's existing 5-mode brand structure.
+- **Type fidelity over convenience**: sizes are real `FLOAT` variables aliasing `Scale`. Family
+  and weight are `STRING` (categorical/text values, not magnitudes).
+- **Anomalous values get a parking spot, not a force-fit.** A value that doesn't match its
+  apparent category (the precedent: `Weight Medium Underline`, a decoration value, not a numeric
+  weight) gets its own clearly-named placeholder under the closest existing group rather than
+  being dropped into `Font-Weight` proper or invented a whole new tier without sign-off.
+- **5-mode default**: unless told otherwise, new Tier 2 typography values are identical across
+  `Default`, `Lite`, `Priority`, `Privilege`, `Wealth`. Per-brand typography differences are a
+  deliberate, explicitly-requested exception, not a default.
+
+---
+
+## Phases at a glance
+
+```
+Phase 0 — Discovery                          (read-only)
+    └── Inventory the typography variable(s) relevant to this run (new style? stray collection?
+         existing token to audit?) — values, types, current location
+    └── Cross-reference any size values against 1. Primitives > Scale by VALUE, not name/assumption
+         ↓
+Phase 1 — Surface findings                   (read-only)
+    └── Report exact overlap/gap vs. Scale; flag any anomalous or stray values found
+         ↓
+    ⛔ HUMAN GATE A — confirm gap list and anomaly handling
+         ↓
+Phase 2 — Tier 1 build
+    └── 2a. Fill any Scale gaps using name = value × 25
+    └── 2b. Create/extend Typography/Font-Family or Typography/Font-Weight in 1. Primitives,
+         in a sensible logical order (no reorder API — get order right at creation)
+         ↓
+    ⛔ HUMAN GATE B — confirm naming and resolvedType choices
+         ↓
+Phase 3 — Tier 2 build
+    └── Recreate/extend the relevant token variable(s) under 2. Tokens > Typography — sizes as
+         FLOAT aliasing Scale, family/weight as STRING aliasing Tier 1, identical across all 5
+         brand modes unless told otherwise
+    └── KEY GOTCHA: Figma cannot alias across resolvedType (STRING ↔ FLOAT). A STRING-typed
+         legacy size variable must be deleted and recreated as FLOAT — there is no in-place type
+         change. Recreating breaks existing node bindings to the old ID.
+         ↓
+    ⛔ HUMAN GATE C — sign off on any recreate-vs-keep decision for type-mismatched variables
+         before writing anything
+         ↓
+Phase 4 — Bind deferred/anomalous values
+    └── Once the user has said where a parked value belongs, create its real Tier 1 home and
+         re-point the Tier 2 variable(s) to it
+         ↓
+Phase 5 — Verify before cleanup
+    └── Re-fetch 2. Tokens > Typography with resolveAliases — confirm every value/type matches
+         expectations across all 5 modes
+         ↓
+    ⛔ HUMAN GATE D — confirm verification is clean, and confirm whether live nodes/components are
+         bound to anything about to be deleted
+         ↓
+Phase 6 — Cleanup (only if this run involves removing a legacy/stray collection)
+    └── Delete any collection sitting outside 1. Primitives / 2. Tokens / 3. Semantics
+         ↓
+Phase 7 — Final verify
+    └── Re-fetch full file variable summary — assert only the 3 tier collections remain
+```
+
+---
+
+## Phase 0 — Discovery
+
+Read whatever typography variables are relevant to the current request:
+- If extending/auditing existing tokens: read `2. Tokens > Typography` and the relevant
+  `1. Primitives > Typography` + `Scale` groups.
+- If a new stray/legacy typography collection has shown up (e.g. someone added type styles
+  outside the architecture again): inventory it fully — name, type, value per variable.
+
+**Cross-reference any size value against `Scale` by resolved number, not name or assumption.**
+Build the explicit overlap/gap table. Don't trust "we already have this" without checking.
+
+**Watch for non-typography strays** mixed into whatever you're inventorying (the precedent: a
+stray `Label` boolean). Note it, don't migrate it, don't delete it without asking.
+
+## Phase 1 — Surface findings (Gate A)
+
+Report, in writing, before proposing structure:
+- The overlap/gap table vs. `Scale`.
+- Any value that doesn't match what its name implies.
+- Any stray variable found.
+- The proposed Tier 1 group/step names.
+
+Wait for sign-off before Phase 2.
+
+## Phase 2 — Tier 1 build
+
+**2a.** Fill any `Scale` gaps using Hexa's formula `name = value × 25` (exceptions: `Scale/1000` =
+`1000`, `Scale/1` = `1`).
+
+**2b.** Create or extend `Typography/Font-Family/[Step]` (`STRING`) and
+`Typography/Font-Weight/[Step]` (`STRING`) under `1. Primitives`, preserving values exactly.
+
+**Gotcha — creation order is permanent.** No reorder API. Create in a logical order matching the
+surrounding ramp on the first pass.
+
+**Gate B**: confirm any literal-accuracy concern on a label (e.g. a family step name that doesn't
+actually match the typeface) and confirm `resolvedType` choices before proceeding.
+
+## Phase 3 — Tier 2 build
+
+Recreate or extend the relevant variable(s) under `2. Tokens > Typography`:
+- `Font Family` fields → `STRING`, alias the Tier 1 `Font-Family` variable.
+- `weight-*` fields → `STRING`, alias the Tier 1 `Font-Weight` variable.
+- `size*` fields → `FLOAT`, alias the matching `Scale` step.
+
+Set the same alias across all 5 modes (`Default`, `Lite`, `Priority`, `Privilege`, `Wealth`)
+unless the user has explicitly asked for per-brand differentiation for this specific value.
+
+**KEY GOTCHA — type-locked aliasing.** Figma rejects aliasing across `resolvedType`. A
+STRING-typed legacy size variable cannot alias a FLOAT `Scale` step. Since `resolvedType` is
+immutable post-creation, fixing this means delete + recreate — which breaks any existing node
+bindings to the old variable ID. Call this out explicitly at Gate C; don't discover it mid-write.
+
+**Gate C**: explicit sign-off on every recreate-vs-keep decision for type-mismatched variables
+before writing anything.
+
+## Phase 4 — Bind deferred/anomalous values
+
+Once the user has said where a parked value belongs (e.g. a decoration value getting its own
+`Font-Weight/[Name] Underline` placeholder), create its real Tier 1 home and re-point the relevant
+Tier 2 variable(s) to the **new** variable, not the legacy one.
+
+## Phase 5 — Verify before cleanup (Gate D)
+
+Re-fetch `2. Tokens > Typography` with `resolveAliases: true`. Confirm for every variable, every
+mode:
+- Resolved value matches expectation exactly.
+- `resolvedType` is correct (FLOAT for sizes, STRING for family/weight).
+- Nothing still aliases a legacy/stray collection.
+
+Report mismatches with variable name + ID — never auto-correct silently.
+
+Then ask explicitly: does the file currently have live nodes/components bound to anything about
+to be deleted? If yes, stop and scope a node-rebind pass before Phase 6 — different variable IDs
+mean no automatic migration even where names match.
+
+## Phase 6 — Cleanup
+
+Only runs if this session involves removing a legacy/stray collection sitting outside the 3-tier
+system. Delete it with `figma_delete_variable_collection`, confirming the reported variable count
+matches expectations.
+
+## Phase 7 — Final verify
+
+Re-fetch the full file variable summary (`figma_get_variables`, `format: "summary"`,
+`refreshCache: true`). Assert only `1. Primitives`, `2. Tokens`, `3. Semantics` remain, and that
+the variable count change matches what was actually done. Report this back as close-out.
+
+---
+
+## Standing rules (apply throughout all phases)
+
+- `1. Primitives` is hardcoded, single-mode. `2. Tokens` aliases Tier 1 only and carries Hexa's 5
+  brand modes. Never let a Tier 2 typography variable alias a non-typography Tier 1 primitive by
+  accident.
+- Cross-reference "we already have this" claims against real resolved values, every time.
+- Never force an anomalous value into a group just because that's its legacy location — ask.
+- Phases 0–1 and 5 are read-only. Gates C and D are real stops, not formalities.
+- Creation order and `resolvedType` are permanent at creation time — get both right before
+  calling create.
+
+---
+
+## Common failure modes
+
+**Trusting a value-overlap claim without checking.** Partial overlap with `Scale` is common —
+always compute the real overlap from resolved values first.
+
+**Force-fitting an anomalous value into its apparent group.** Reproduces the original
+miscategorization in the new architecture instead of fixing it.
+
+**Trying to alias STRING ↔ FLOAT.** Figma rejects this outright. Delete + recreate is the only
+fix, and it breaks existing node bindings — flag this before writing, not after it fails.
+
+**Letting a standalone Typography collection persist.** Typography is primitives + tokens inside
+Hexa's existing tiers, never its own collection living alongside `1. Primitives` / `2. Tokens` /
+`3. Semantics`.
+
+**Building new Scale/Typography steps out of order.** No reorder API — get the order right at
+creation.
+
+**Deleting a legacy collection before checking for live node bindings.** Always re-confirm at the
+actual point of deletion, even if an earlier message said the file was empty — file state can
+change between sessions.
+
+**Assuming Tier 2 values should or shouldn't differ per brand mode without asking.** Default is
+identical-across-modes; per-brand differentiation is an explicit request, never assumed.
